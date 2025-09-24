@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My E-Card</title>
+  <style>
+    :root{ --bg:#f6f6f8; --card-bg:#ffffff; --accent:#ff6b81 }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fafafa,#f0f4ff);font-family:Inter,system-ui,Arial,sans-serif;padding:24px}
+
+    .stage{width:360px;max-width:92vw;perspective:1200px}
+    .card{width:100%;height:520px;position:relative;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.2,.8,.2,1);cursor:pointer}
+    .card.open{transform:rotateY(-160deg)}
+
+    .face{position:absolute;inset:0;border-radius:18px;background:var(--card-bg);box-shadow:0 12px 30px rgba(20,30,50,.12);overflow:hidden;display:flex;flex-direction:column}
+
+    /* front face */
+    .front{transform:rotateY(0deg);z-index:2}
+    .front .photo{flex:1;background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.1));display:flex;align-items:center;justify-content:center;}
+    .front img{width:100%;height:100%;object-fit:cover;display:block}
+    .front .caption{padding:14px 18px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.04));font-weight:600;display:flex;align-items:center;gap:8px}
+
+    .front .heart{width:36px;height:36px;border-radius:10px;background:linear-gradient(90deg,#ff9aa2,#ff6b81);display:inline-grid;place-items:center;color:white;font-size:18px}
+
+    /* inside/back face */
+    .inside{transform:rotateY(180deg);backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:34px;text-align:center}
+    .message{font-size:20px;line-height:1.4;color:#1b2430;margin-bottom:18px}
+    .sub{color:#556;max-width:100%;font-size:15px}
+
+    .btns{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:10px;justify-content:center}
+    .btn{background:transparent;border:1px solid rgba(20,30,50,.06);padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+
+    /* small note */
+    .hint{position:absolute;left:14px;top:12px;font-size:12px;color:#667;}
+
+    /* responsive */
+    @media (min-width:700px){.stage{width:420px}.card{height:520px}}
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="hint">Click the card to open 💌</div>
+    <div id="card" class="card" role="button" tabindex="0" aria-label="Open e-card">
+
+      <!-- FRONT -->
+      <div class="face front">
+        <div class="photo">
+          <!-- Replace 'front.jpg' with your photo file. Keep filename exact or change src below. -->
+          <img id="frontImg" src="front.jpg" alt="Our photo" />
+        </div>
+        <div class="caption">
+          <div class="heart">❤</div>
+          <div>To my favourite person</div>
+        </div>
+      </div>
+
+      <!-- INSIDE -->
+      <div class="face inside">
+        <div>
+          <div class="message" id="messageText">Hey love — every day with you feels like the best chapter of my life. Thank you for being you. 💫</div>
+          <div class="sub">Click anywhere to close. Share this link and open it together!</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="btns">
+      <button class="btn" id="downloadBtn">Download image</button>
+      <button class="btn" id="replaceBtn">Replace photo</button>
+    </div>
+  </div>
+
+  <input id="fileInput" type="file" accept="image/*" style="display:none" />
+
+  <script>
+    const card = document.getElementById('card');
+    const fileInput = document.getElementById('fileInput');
+    const frontImg = document.getElementById('frontImg');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const replaceBtn = document.getElementById('replaceBtn');
+    const messageText = document.getElementById('messageText');
+
+    // toggle open/close on click or Enter/Space
+    function toggle(){ card.classList.toggle('open'); }
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') toggle(); });
+
+    // replace photo client-side (does not upload anywhere) — great for preview before hosting
+    replaceBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const url = URL.createObjectURL(f);
+      frontImg.src = url;
+      // optionally change default alt
+      frontImg.alt = f.name;
+    });
+
+    // download the current front image as a file (for gift or backup)
+    downloadBtn.addEventListener('click', ()=>{
+      const a = document.createElement('a');
+      const src = frontImg.src;
+      // if it's a file object URL or data URL, just use it; otherwise try to fetch/blob it
+      if(src.startsWith('blob:') || src.startsWith('data:')){
+        a.href = src; a.download = 'ecard-front.jpg'; document.body.appendChild(a); a.click(); a.remove();
+      } else {
+        // attempt to download by fetching the image and creating a blob (works on many hosts)
+        fetch(src, {mode:'cors'}).then(r=>r.blob()).then(blob=>{
+          const u = URL.createObjectURL(blob);
+          a.href = u; a.download = 'ecard-front.jpg'; document.body.appendChild(a); a.click(); a.remove();
+          URL.revokeObjectURL(u);
+        }).catch(()=> alert('Download failed — try saving the original image file and re-uploading before downloading.'))
+      }
+    });
+
+    // (optional) let URL include a message via query param ?m=... — useful when sharing links
+    function readMessageFromQuery(){
+      try{
+        const params = new URLSearchParams(location.search);
+        const m = params.get('m');
+        if(m){ messageText.textContent = decodeURIComponent(m); }
+      }catch(e){}
+    }
+    readMessageFromQuery();
+
+    // Accessibility: focus style
+    card.addEventListener('focus', ()=> card.style.outline = '2px solid rgba(99,102,241,.14)');
+    card.addEventListener('blur', ()=> card.style.outline = '');
+  </script>
+</body>
+</html>
