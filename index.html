@@ -65,20 +65,9 @@
 
     </div>
 
-    <div class="btns">
-      <button class="btn" id="downloadBtn">Download image</button>
-      <button class="btn" id="replaceBtn">Replace photo</button>
-    </div>
-  </div>
-
-  <input id="fileInput" type="file" accept="image/*" style="display:none" />
-
   <script>
     const card = document.getElementById('card');
-    const fileInput = document.getElementById('fileInput');
     const frontImg = document.getElementById('frontImg');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const replaceBtn = document.getElementById('replaceBtn');
     const messageText = document.getElementById('messageText');
 
     // toggle open/close on click or Enter/Space
@@ -86,33 +75,6 @@
     card.addEventListener('click', toggle);
     card.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') toggle(); });
 
-    // replace photo client-side (does not upload anywhere) — great for preview before hosting
-    replaceBtn.addEventListener('click', ()=> fileInput.click());
-    fileInput.addEventListener('change', (e)=>{
-      const f = e.target.files[0];
-      if(!f) return;
-      const url = URL.createObjectURL(f);
-      frontImg.src = url;
-      // optionally change default alt
-      frontImg.alt = f.name;
-    });
-
-    // download the current front image as a file (for gift or backup)
-    downloadBtn.addEventListener('click', ()=>{
-      const a = document.createElement('a');
-      const src = frontImg.src;
-      // if it's a file object URL or data URL, just use it; otherwise try to fetch/blob it
-      if(src.startsWith('blob:') || src.startsWith('data:')){
-        a.href = src; a.download = 'ecard-front.jpg'; document.body.appendChild(a); a.click(); a.remove();
-      } else {
-        // attempt to download by fetching the image and creating a blob (works on many hosts)
-        fetch(src, {mode:'cors'}).then(r=>r.blob()).then(blob=>{
-          const u = URL.createObjectURL(blob);
-          a.href = u; a.download = 'ecard-front.jpg'; document.body.appendChild(a); a.click(); a.remove();
-          URL.revokeObjectURL(u);
-        }).catch(()=> alert('Download failed — try saving the original image file and re-uploading before downloading.'))
-      }
-    });
 
     // (optional) let URL include a message via query param ?m=... — useful when sharing links
     function readMessageFromQuery(){
